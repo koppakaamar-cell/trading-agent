@@ -172,16 +172,17 @@ Covers the risk manager (sizing, stop-loss/take-profit, and the daily-loss
 halt's realized-vs-unrealized distinction), the backtest engine end-to-end
 (scripted deterministic strategies, no network - includes an integration
 test that reproduces the exact scenario the mark-to-market fix closed),
+the momentum strategy's crossover math itself (hand-computed scenarios
+with small windows, so the "right" answer is independently verifiable),
 both news veto gates (per-symbol and macro, including gate ordering and
 that SELLs are never touched), and `universe/`'s filtering stages
 (liquidity, volatility band, earnings proximity, sentiment, correlation
 cap). Everything that touches yfinance is monkeypatched, so the suite
 never hits the network and never depends on live market conditions.
 
-There's no coverage yet for `strategies/momentum.py`'s crossover math,
-`data/data_provider.py`'s CSV/yfinance loaders, or `build_watchlist.py`/
-`run_backtest.py` as scripts (only the modules they call) - worth adding
-if you touch those next.
+There's no coverage yet for `data/data_provider.py`'s CSV/yfinance
+loaders, or `build_watchlist.py`/`run_backtest.py` as scripts (only the
+modules they call) - worth adding if you touch those next.
 
 ## Before you connect this to real money, honestly ask yourself
 

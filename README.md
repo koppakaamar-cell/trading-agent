@@ -58,6 +58,29 @@ Robinhood's side: a human/Claude checkpoint sits between "the strategy
 wants to trade" and "an order hits the market." This scaffold keeps that
 boundary intact rather than working around it.
 
+### Connecting the Robinhood MCP server
+
+`.mcp.json` in this project already points Claude Code at
+`https://agent.robinhood.com/mcp/trading`. Two things still have to happen
+before the tools are actually usable, and neither is something Claude can
+do on your behalf:
+
+1. **Restart Claude Code.** MCP servers are only loaded at session start,
+   so a session that was already running before `.mcp.json` was added
+   won't see the new tools until you reload.
+2. **Authenticate.** The first time the Robinhood tools are used, their
+   server runs an OAuth flow in your browser to link your actual Robinhood
+   account - specifically the dedicated Agentic account mentioned below,
+   not your main brokerage account. Claude never sees or handles your
+   Robinhood credentials.
+
+Connecting doesn't mean live trading starts - `place_equity_order` still
+only ever gets called after `review_equity_order`'s preview and your
+explicit go-ahead, trade by trade. But it's still worth going through the
+"before you connect this to real money" checklist further down before you
+do this for real, since none of those boxes are auto-checked just because
+the connector works.
+
 The intended live loop, once you're ready:
 
 1. Open this project in Claude Code with the Robinhood MCP connector

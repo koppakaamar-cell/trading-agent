@@ -68,20 +68,33 @@ class TestDailyLossBreached:
 
 
 class TestCheckStopLosses:
-    def test_stop_loss_triggers(self):
-        rm = RiskManager(RiskLimits(stop_loss_pct=0.05, take_profit_pct=0.15))
+    def test_stop_loss_triggers_from_entry(self):
+        """With no prior high, the peak is the entry price - so an initial
+        drop past trailing_stop_pct closes the position exactly like a
+        fixed stop-loss would."""
+        rm = RiskManager(RiskLimits(trailing_stop_pct=0.05))
         state = make_state(positions={"AAPL": {"qty": 10, "avg_price": 100.0}})
         to_close = rm.check_stop_losses(state, {"AAPL": 94.0})  # -6%
         assert to_close == ["AAPL"]
 
-    def test_take_profit_triggers(self):
-        rm = RiskManager(RiskLimits(stop_loss_pct=0.05, take_profit_pct=0.15))
+    def test_rally_does_not_force_exit_and_updates_peak(self):
+        """No fixed take-profit target: a position that keeps making new
+        highs stays open, and its peak is tracked for the trailing stop."""
+        rm = RiskManager(RiskLimits(trailing_stop_pct=0.20))
         state = make_state(positions={"AAPL": {"qty": 10, "avg_price": 100.0}})
-        to_close = rm.check_stop_losses(state, {"AAPL": 120.0})  # +20%, past 15% target
+        to_close = rm.check_stop_losses(state, {"AAPL": 150.0})  # +50%, no target to hit
+        assert to_close == []
+        assert state.positions["AAPL"]["peak_price"] == 150.0
+
+    def test_trailing_stop_fires_on_pullback_from_peak(self):
+        rm = RiskManager(RiskLimits(trailing_stop_pct=0.20))
+        state = make_state(positions={"AAPL": {"qty": 10, "avg_price": 100.0}})
+        assert rm.check_stop_losses(state, {"AAPL": 150.0}) == []  # sets peak to 150
+        to_close = rm.check_stop_losses(state, {"AAPL": 115.0})  # -23% from the 150 peak
         assert to_close == ["AAPL"]
 
     def test_within_band_does_not_trigger(self):
-        rm = RiskManager(RiskLimits(stop_loss_pct=0.05, take_profit_pct=0.15))
+        rm = RiskManager(RiskLimits(trailing_stop_pct=0.05))
         state = make_state(positions={"AAPL": {"qty": 10, "avg_price": 100.0}})
         to_close = rm.check_stop_losses(state, {"AAPL": 103.0})
         assert to_close == []

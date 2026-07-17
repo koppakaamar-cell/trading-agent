@@ -164,7 +164,7 @@ def run_backtest(
                         cost = qty * price + commission_per_trade
                 if qty > 0:
                     state.cash -= cost
-                    state.positions[symbol] = {"qty": qty, "avg_price": price}
+                    state.positions[symbol] = {"qty": qty, "avg_price": price, "peak_price": price}
                     trades.append(Trade(current_date, symbol, "buy", qty, price, signal.reason))
 
             elif signal.action == Action.SELL and symbol in state.positions:

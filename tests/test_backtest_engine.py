@@ -58,8 +58,8 @@ class TestBasicFlow:
     def test_stop_loss_forces_exit_regardless_of_strategy_signal(self):
         dates = pd.bdate_range(start="2024-01-02", periods=2)
         strategy = ScriptedStrategy({("A", dates[0].strftime("%Y-%m-%d")): Action.BUY})
-        price_data = {"A": make_ohlcv([100.0, 90.0])}  # -10%, past the 5% stop
-        risk_manager = RiskManager(RiskLimits(max_position_pct=1.0, max_single_trade_pct=1.0, stop_loss_pct=0.05))
+        price_data = {"A": make_ohlcv([100.0, 90.0])}  # -10%, past the 5% trailing stop
+        risk_manager = RiskManager(RiskLimits(max_position_pct=1.0, max_single_trade_pct=1.0, trailing_stop_pct=0.05))
 
         result = run_backtest(strategy, price_data, starting_cash=1_000.0, risk_manager=risk_manager)
 
@@ -132,7 +132,7 @@ class TestDailyLossHaltIntegration:
         }
         risk_manager = RiskManager(RiskLimits(
             max_position_pct=0.9, max_single_trade_pct=0.9,
-            max_daily_loss_pct=0.03, stop_loss_pct=0.05, max_open_positions=8,
+            max_daily_loss_pct=0.03, trailing_stop_pct=0.05, max_open_positions=8,
         ))
 
         result = run_backtest(strategy, price_data, starting_cash=10_000.0, risk_manager=risk_manager)
@@ -161,7 +161,7 @@ class TestDailyLossHaltIntegration:
         }
         risk_manager = RiskManager(RiskLimits(
             max_position_pct=0.9, max_single_trade_pct=0.9,
-            max_daily_loss_pct=0.03, stop_loss_pct=0.05, max_open_positions=8,
+            max_daily_loss_pct=0.03, trailing_stop_pct=0.05, max_open_positions=8,
         ))
 
         result = run_backtest(strategy, price_data, starting_cash=10_000.0, risk_manager=risk_manager)

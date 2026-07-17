@@ -3,8 +3,9 @@ Run a backtest of the configured strategy against real historical data
 (via yfinance) or synthetic data (as a smoke test / offline fallback).
 
 Usage:
-    python run_backtest.py                  # real data, last 2 years
+    python run_backtest.py                  # real data, last 2 years, default ('position') profile
     python run_backtest.py --years 5         # real data, last 5 years
+    python run_backtest.py --profile swing   # week-scale swing trading profile (see config.yaml)
     python run_backtest.py --synthetic       # synthetic random-walk smoke test
 """
 
@@ -49,11 +50,17 @@ def main():
                          help="years of real history to pull (default: 2)")
     parser.add_argument("--no-news", action="store_true",
                          help="skip attaching news/sentiment/fundamentals context to sample order intents")
+    parser.add_argument("--profile", default=None,
+                         help="strategy profile from config.yaml's strategy.profiles to use "
+                              "(default: strategy.active_profile, currently 'position')")
     args = parser.parse_args()
 
     cfg = load_config()
 
-    strategy = MomentumStrategy(**cfg["strategy"]["params"])
+    profile_name = args.profile or cfg["strategy"]["active_profile"]
+    strategy_params = cfg["strategy"]["profiles"][profile_name]
+    print(f"Using strategy profile '{profile_name}': {strategy_params}")
+    strategy = MomentumStrategy(**strategy_params)
     risk_manager = RiskManager(RiskLimits(**cfg["risk"]))
 
     if args.synthetic:

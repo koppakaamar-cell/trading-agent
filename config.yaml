@@ -7,17 +7,23 @@ account:
 
 strategy:
   name: momentum_ma_crossover
-  params:
-    fast_window: 20
-    slow_window: 50
+  active_profile: position   # which profile below run_backtest.py uses by default (override with --profile)
+  profiles:
+    # Daily-bar windows, so "fast"/"slow" here means trading days, not weeks/months.
+    position:   # current default - needs a 50-day warm-up, holds positions for months
+      fast_window: 20
+      slow_window: 50
+    swing:      # week-scale swing trading - 5d MA (~1 trading week) vs 20d MA (~1 trading month),
+                # reacts within days instead of needing months of warm-up
+      fast_window: 5
+      slow_window: 20
 
 risk:
-  max_position_pct: 0.10       # max 10% of portfolio in any one symbol
+  max_position_pct: 1.0        # a single symbol may use up to 100% of the portfolio
   max_daily_loss_pct: 0.03     # halt new trades after 3% total (realized + unrealized) equity loss in a day
   max_open_positions: 8
-  stop_loss_pct: 0.05          # exit a position down 5% from entry
-  take_profit_pct: 0.15
-  max_single_trade_pct: 0.05
+  trailing_stop_pct: 0.05      # exit if price falls 5% from its peak since entry - lets winners run instead of exiting at a fixed target
+  max_single_trade_pct: 1.0    # a single order may use up to 100% of the portfolio (available cash is still the real cap)
 
 # Fixed watchlist used ONLY by run_backtest.py. Deliberately static and
 # manually chosen - do not replace this with build_watchlist.py's dynamic

@@ -16,12 +16,11 @@ from strategies.base import Action, Signal
 
 @dataclass
 class RiskLimits:
-    max_position_pct: float = 0.10       # max % of portfolio in one symbol
+    max_position_pct: float = 1.0        # max % of portfolio in one symbol
     max_daily_loss_pct: float = 0.03      # halt trading for the day past this
     max_open_positions: int = 8
-    stop_loss_pct: float = 0.05           # per-position stop loss
-    take_profit_pct: float = 0.15         # optional per-position target
-    max_single_trade_pct: float = 0.05    # max % of portfolio in one order
+    trailing_stop_pct: float = 0.05       # exit if price falls this far from its peak since entry
+    max_single_trade_pct: float = 1.0     # max % of portfolio in one order
 
 
 @dataclass
@@ -73,18 +72,26 @@ class RiskManager:
         return loss_pct >= self.limits.max_daily_loss_pct
 
     def check_stop_losses(self, state: PortfolioState, current_prices: dict) -> list:
-        """Returns list of symbols that have breached their stop loss and
-        should be closed, regardless of what the strategy says."""
+        """Returns list of symbols that have pulled back `trailing_stop_pct`
+        from their peak price since entry (or from entry itself, if no new
+        high has been made yet) and should be closed, regardless of what the
+        strategy says.
+
+        Trailing off the peak - rather than a fixed take-profit target -
+        means a position that keeps making new highs is never force-closed
+        for "being up enough"; it only exits once it actually gives back
+        `trailing_stop_pct` from wherever it peaked. On day one that peak
+        is the entry price, so this also acts as the initial stop-loss.
+        """
         to_close = []
         for symbol, pos in state.positions.items():
             price = current_prices.get(symbol)
             if price is None:
                 continue
-            entry = pos["avg_price"]
-            change_pct = (price - entry) / entry
-            if change_pct <= -self.limits.stop_loss_pct:
-                to_close.append(symbol)
-            elif change_pct >= self.limits.take_profit_pct:
+            peak = max(pos.get("peak_price", pos["avg_price"]), price)
+            pos["peak_price"] = peak
+            drawdown_from_peak = (peak - price) / peak
+            if drawdown_from_peak >= self.limits.trailing_stop_pct:
                 to_close.append(symbol)
         return to_close
 

@@ -1,0 +1,5 @@
+pandas>=2.0
+numpy>=1.24
+PyYAML>=6.0
+yfinance>=0.2   # optional, only needed for load_from_yfinance
+vaderSentiment>=3.3   # headline sentiment scoring for news/sentiment.py

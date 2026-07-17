@@ -1,0 +1,79 @@
+# Trading agent configuration
+
+account:
+  starting_cash: 10000.0
+  # In live/paper trading via Claude Code, this is the Robinhood dedicated
+  # Agentic account balance, not your main brokerage account.
+
+strategy:
+  name: momentum_ma_crossover
+  params:
+    fast_window: 20
+    slow_window: 50
+
+risk:
+  max_position_pct: 0.10       # max 10% of portfolio in any one symbol
+  max_daily_loss_pct: 0.03     # halt new trades after 3% total (realized + unrealized) equity loss in a day
+  max_open_positions: 8
+  stop_loss_pct: 0.05          # exit a position down 5% from entry
+  take_profit_pct: 0.15
+  max_single_trade_pct: 0.05
+
+# Fixed watchlist used ONLY by run_backtest.py. Deliberately static and
+# manually chosen - do not replace this with build_watchlist.py's dynamic
+# output, since that would backtest a strategy against a universe selected
+# using information (today's liquidity/volatility/sentiment) that didn't
+# exist at the historical dates being tested. See universe/screen.py.
+watchlist:
+  - AAPL
+  - MSFT
+  - SPY
+  - QQQ
+
+# Criteria for build_watchlist.py, which screens a live pool of liquid/
+# active stocks (via Yahoo Finance screeners) for the live/paper flow.
+# Never consumed by run_backtest.py - see the warning on `watchlist:` above.
+universe:
+  screeners:
+    - most_actives
+    - day_gainers
+    - growth_technology_stocks
+  candidates_per_screener: 25
+  max_symbols: 10
+  min_price: 5.0
+  min_avg_volume: 1000000
+  min_annualized_volatility: 0.15
+  max_annualized_volatility: 0.80
+  min_days_to_earnings: 3        # exclude candidates with earnings sooner than this
+  min_sentiment_score: -0.2      # exclude candidates more negative than this
+  max_correlation: 0.7           # cap pairwise return correlation among selected picks
+
+costs:
+  slippage_bps: 5          # fill price moves against you by 0.05% per trade
+  commission_per_trade: 0.0   # most brokers (incl. Robinhood) are $0/trade for equities
+
+news:
+  enabled: false            # set true to let negative per-symbol sentiment veto new BUYs
+  veto_sentiment_threshold: -0.2   # block a BUY when this symbol's headline sentiment <= this
+  # Informational headlines/fundamentals/earnings are always attached to
+  # sample order intents regardless of this flag (see news/context.py).
+  # This only controls whether negative sentiment can actually block a BUY.
+
+  # Broad market/macro news (Fed, rates, general risk-on/risk-off tone) via
+  # ^GSPC/^DJI/^IXIC/^VIX headlines - not tied to any one symbol. Checked
+  # BEFORE the per-symbol gate above: a risk-off macro tape blocks every
+  # symbol's BUY, not just one. See news/market_news.py, news/filter.py.
+  macro:
+    enabled: false           # set true to let negative macro sentiment veto ALL new BUYs
+    veto_sentiment_threshold: -0.3   # block ALL BUYs when market-wide sentiment <= this
+    symbols:
+      - ^GSPC
+      - ^DJI
+      - ^IXIC
+      - ^VIX
+
+mode: backtest   # backtest | paper | live
+# Change this only after: (1) a backtest across multiple market regimes
+# looks reasonable, and (2) you've run "paper" mode logic against live
+# quotes with review_equity_order previews for a while without submitting
+# real orders.

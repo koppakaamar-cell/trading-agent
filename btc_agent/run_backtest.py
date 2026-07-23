@@ -1,13 +1,12 @@
 """
-Run a backtest of the BTC momentum strategy against real BTC-USD history.
+Run a backtest of the configured BTC strategy against real BTC-USD history.
 
 Usage (from this directory):
-    python run_backtest.py                  # real data, last 2 years
-    python run_backtest.py --years 5         # real data, last 5 years
+    python run_backtest.py                  # real data, config.yaml's lookback_days
+    python run_backtest.py --days 200        # override the lookback window
 """
 
 import argparse
-import datetime as dt
 import sys
 from pathlib import Path
 
@@ -21,10 +20,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import yaml
 
 from btc_agent.backtest import run_backtest
-from btc_agent.data import load_btc_history
+from btc_agent.data import load_btc_intraday_history
 from btc_agent.execution import build_order_intents_from_trades
 from btc_agent.risk import RiskLimits, RiskManager
-from btc_agent.strategy import MomentumStrategy
+from btc_agent.strategy import MomentumStrategy, SwingReversalStrategy
+
+STRATEGIES = {
+    "momentum_ma_crossover": MomentumStrategy,
+    "swing_reversal": SwingReversalStrategy,
+}
 
 
 def load_config(path: str = "config.yaml") -> dict:
@@ -34,20 +38,23 @@ def load_config(path: str = "config.yaml") -> dict:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--years", type=int, default=2,
-                         help="years of real history to pull (default: 2)")
+    parser.add_argument("--days", type=int, default=None,
+                         help="days of intraday history to pull (default: config.yaml's data.lookback_days)")
     args = parser.parse_args()
 
     cfg = load_config()
     symbol = cfg["symbol"]
 
-    strategy = MomentumStrategy(**cfg["strategy"]["params"])
+    strategy_cfg = cfg["strategy"]
+    strategy = STRATEGIES[strategy_cfg["name"]](**strategy_cfg["params"])
     risk_manager = RiskManager(RiskLimits(**cfg["risk"]))
 
-    end = dt.date.today()
-    start = end - dt.timedelta(days=365 * args.years)
-    print(f"Fetching {args.years}y of real history for {symbol}...")
-    price_data = load_btc_history(symbol, start=start.isoformat(), end=end.isoformat())
+    data_cfg = cfg.get("data", {})
+    interval = data_cfg.get("interval", "1h")
+    days = args.days or data_cfg.get("lookback_days", 365)
+
+    print(f"Fetching {days}d of {interval} history for {symbol}...")
+    price_data = load_btc_intraday_history(symbol, days=days, interval=interval)
     if price_data.empty:
         raise SystemExit(f"No data returned for {symbol}.")
 
@@ -66,7 +73,7 @@ def main():
 
     print("\n--- Last 5 trades ---")
     for t in result.trades[-5:]:
-        print(f"{t.date.date()} {t.action.upper():4s} {t.qty:.6f} {symbol} @ ${t.price:,.2f}  ({t.reason})")
+        print(f"{t.date} {t.action.upper():4s} {t.qty:.6f} {symbol} @ ${t.price:,.2f}  ({t.reason})")
 
     intents = build_order_intents_from_trades(result.trades[-3:], strategy.name, symbol)
     print("\n--- Sample order intents (for Claude Code to review via MCP, once crypto tools are confirmed) ---")

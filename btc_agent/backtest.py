@@ -10,14 +10,15 @@ these before trusting results):
   - Fills happen at the same bar's close, not the next bar's open
   - Slippage and commission only apply if passed in (both default to 0)
   - No partial fills, no market-impact modeling
-  - Daily bars only - see data.py for why intraday isn't covered here.
-    This matters a lot if risk.RiskLimits.take_profit_pct/stop_loss_pct are
-    set tight (e.g. sub-1%): this engine only checks the target once per
-    day, against that day's close. It cannot see an intraday touch of the
-    target that reverses before the close, so tight intraday targets will
-    look meaningfully different here than they would trading real-time.
+  - Works on whatever bar granularity price_data is in (daily or intraday -
+    see data.py's load_btc_history vs. load_btc_intraday_history). A
+    strategy targeting sub-1% moves still only gets checked once per bar,
+    so it cannot see a touch of its target that reverses within the same
+    bar - use finer bars if that matters for a given strategy.
   - "Trading day" boundaries (for the daily loss halt) are calendar-day
-    based, since crypto has no exchange open/close to anchor to
+    based, since crypto has no exchange open/close to anchor to. This
+    still works with intraday bars - it just resets once per day rather
+    than once per bar.
 """
 
 from dataclasses import dataclass, field

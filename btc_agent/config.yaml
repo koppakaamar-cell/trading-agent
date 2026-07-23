@@ -14,14 +14,22 @@ symbol: BTC-USD   # yfinance ticker, used for backtesting only. Robinhood
                    # crypto" section.
 
 strategy:
-  name: momentum_ma_crossover
+  name: swing_reversal
   params:
-    fast_window: 20
-    slow_window: 50
+    lookback_bars: 24   # trailing bars (hours, at the default 1h interval)
+                         # that define the "recent" high/low to react to
+    reversal_pct: 0.05   # 5% pullback from the recent high triggers a buy,
+                          # 5% bounce off the recent low triggers a sell -
+                          # see README for why tighter thresholds lose to costs
+
+data:
+  interval: 1h        # bar size for backtesting - see data.py for what
+                       # yfinance actually supports per interval
+  lookback_days: 365   # clamped to ~729 for 1h bars if you raise this
 
 risk:
-  trailing_stop_pct: 0.10    # exit once price pulls back 10% from its peak since entry -
-                              # the best risk-adjusted config validated so far (see README)
+  trailing_stop_pct: 0.06    # tuned for this strategy's swings, not the old
+                              # MA-crossover strategy's - see README
   max_daily_loss_pct: 0.05   # halt new entries after 5% equity loss (realized +
                               # unrealized) within a rolling 24h window
   max_position_pct: 1.0      # only one symbol exists here, so this is just

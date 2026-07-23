@@ -1,0 +1,35 @@
+# BTC-only trading service configuration.
+# Separate from the equity scaffold one level up - own account sizing, own
+# risk defaults (crypto moves more than large-cap equities), own strategy
+# tuning. See README.md for what's actually different and why.
+
+account:
+  starting_cash: 2000.0
+  # Not shared with the equity scaffold's account. Size this to an amount
+  # you are fully prepared to lose, independent of the equity side.
+
+symbol: BTC-USD   # yfinance ticker, used for backtesting only. Robinhood
+                   # crypto's own symbol format (likely just "BTC") isn't
+                   # confirmed yet - see README's "Connecting Robinhood
+                   # crypto" section.
+
+strategy:
+  name: momentum_ma_crossover
+  params:
+    fast_window: 20
+    slow_window: 50
+
+risk:
+  trailing_stop_pct: 0.10    # exit once price pulls back 10% from its peak since entry -
+                              # the best risk-adjusted config validated so far (see README)
+  max_daily_loss_pct: 0.05   # halt new entries after 5% equity loss (realized +
+                              # unrealized) within a rolling 24h window
+  max_position_pct: 1.0      # only one symbol exists here, so this is just
+                              # "how much of the account a position can use"
+                              # (cash-constrained in practice)
+
+costs:
+  slippage_bps: 15           # crypto spreads tend to run wider than large-cap equities
+  commission_per_trade: 0.0  # Robinhood crypto is commission-free as of writing
+
+mode: backtest   # backtest | paper | live
